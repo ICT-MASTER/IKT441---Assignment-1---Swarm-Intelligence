@@ -2,9 +2,14 @@ import Download
 import codecs
 from ACO.Ant import ANT
 from ACO.Node import Node
+from ACO.ACO import ACO
 from ACO.Edge import Edge
 from ACO import CityFilter
 import random
+import numpy as np
+import ACO.CityFilter
+import ACO.CUDA
+import time
 
 world_cities_path = "./Download/worldcitiespop.txt.gz"
 world_cities_txt_path = "./Download/worldcitiespop.txt"
@@ -29,45 +34,67 @@ def load_country_codes():
     return country_codes
 
 def load_world_cities(loc=["*"]):
-    world_cities = []
+    nodes = []
+    nodes_latitude = []
+    nodes_longitude = []
 
     with codecs.open(world_cities_txt_path, "r",encoding='utf-8', errors='ignore') as file:
         items = file.readlines()[1:]
+
+        i=0
         for row in items:
             # Country, City, AccentCity, Region, Population, Latitude, Longitude
             split = row.split(",")
             c_code = str(split[0])
             city = str(split[1])
             lat = str(split[5])
-            long = str(split[6].replace("\n",""))
+            lon = str(split[6].replace("\n",""))
 
             if "*" in loc or c_code in loc:
-                world_cities.append([c_code, city, lat, long])
+                nodes.append(Node(idx=i, country=c_code, city=city, lat=lat, lon=lon))
+                nodes_latitude.append(lat)
+                nodes_longitude.append(lon)
+                i += 1
 
-    return world_cities
+    return nodes, np.array(nodes_latitude, dtype=np.float32), np.array(nodes_longitude, dtype=np.float32)
 
-
-
+# Load country codes
+start = time.time()
 country_codes = load_country_codes()
-world_cities = load_world_cities(["no"])
+print("[+{0}] Loaded country_code converter!".format(round(time.time() - start, 2)))
+
+# Load Nodes
+start = time.time()
+nodes, nodes_latitude, nodes_longitude = load_world_cities([ "no", "se", "dk"])
+print("[+{0}] Parsed {1} nodes.".format(round(time.time() - start, 2), len(nodes)))
+
+# Create edges
+start = time.time()
+edges = ACO.CUDA.create_distance_matrix(nodes_latitude, nodes_longitude)
+print("[+{0}] Generated {1} edges using GPU".format(round(time.time() - start, 2), len(edges) ** 2))
+
+# Create edge_pheromones
+start = time.time()
+edges_pheromones = np.ones((nodes_latitude.shape[0], nodes_longitude.shape[0]), dtype=np.int32)
+print("[+{0}] Created pheromones map".format(round(time.time() - start, 2)))
 
 
-nodes = [Node("NA", country="NA", latitude=x[2], longitude=x[3]) for x in world_cities]
-nodes = CityFilter.strip(nodes, 1000)
 
-print("Created {0} nodes.".format(len(nodes)))
-
-
-"""
-edges = [Node(j, k) for j in nodes for k in nodes if j != k]
-print("Create {0} edges.".format(len(edges)))
-"""
+#distance = ACO.CityFilter.calculate_distance_in_metres(nodes_latitude[12000], nodes_longitude[12000], nodes_latitude[1], nodes_longitude[1])
+#print(distance)
+#print(edges[12000][1])
 
 
+MAX_COST = np.sum(edges) # TODO , some nan values. BUT WHERE?
 
-"""
-for i in range(100000):
-    ant = ANT()
-    ant.walk(a)
+start_node = nodes[0]
+
+target_node = nodes[5153]
+
+for i in range(1000000):
+    ant = ANT(start_node, nodes, edges, edges_pheromones, MAX_COST=MAX_COST, target_node=target_node)
+    goal = ant.walk()
     ant.pheromones()
-"""
+
+    print("[{0}]: Edges: {2}, Route: {1}".format(i, sum([edges[item[0]][item[1]] for item in ant.visited_edges]), len(ant.visited_edges)))
+

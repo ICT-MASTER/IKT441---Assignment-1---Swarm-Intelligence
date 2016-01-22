@@ -1,15 +1,13 @@
-
+import numpy as np
 
 class ACO:
-
-
 
     def __init__(self, nodes, edges):
 
         self.nodes = nodes
         self.edges = edges
 
-        self.MAX_COST = ACO.get_sum(edges)
+        self.MAX_COST = ACO.get_sum()
 
         pass
 
@@ -29,9 +27,9 @@ class ACO:
         return set(self.nodes).issubset(visited_nodes)
 
 
-    def get_sum(edges):
+    def get_sum(self):
         """
         Get cost sum for all edges
         :return:
         """
-        return sum(e.cost for e in edges)
+        return np.sum(self.edges)

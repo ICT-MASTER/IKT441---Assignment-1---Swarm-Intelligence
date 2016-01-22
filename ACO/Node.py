@@ -4,14 +4,15 @@ import random
 
 class Node:
 
-    def __init__(self, name, country=None, latitude=None, longitude=None):
-        self.name = name
+    def __init__(self, idx=None, country=None, city=None, lat=None, lon=None):
+        self.idx = idx
 
         self.edges = []
 
         self.country = country
-        self.latitude = float(latitude)
-        self.longitude = float(longitude)
+        self.city= city
+        self.latitude = float(lat)
+        self.longitude = float(lon)
 
 
     def roulette_wheel_simple(self):
@@ -58,4 +59,4 @@ class Node:
 
 
     def __repr__(self):
-        return self.name
+        return str(self.idx)

@@ -6,8 +6,12 @@ def calculate_distance_in_metres(lat1, lon1, lat2, lon2):
     r = 6371000 # Earth radius in metres
 
     phi_1 = math.radians(lat1)
+
     phi_2 = math.radians(lat2)
+
+
     delta_phi = math.radians(lat2 - lat1)
+
     delta_lambda = math.radians(lon2 - lon1)
 
     a = (math.sin(delta_phi / 2) ** 2) + (math.cos(phi_1) * math.cos(phi_2) * math.sin(delta_lambda) ** 2)

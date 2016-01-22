@@ -1,0 +1,6 @@
+/.project
+/__pycache__/
+/.idea/
+/Download/
+*.pyc
+*.iml

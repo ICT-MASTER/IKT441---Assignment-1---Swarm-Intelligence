@@ -33,6 +33,7 @@ __global__ void calculate_distance(float *dest, float *a, float *b, int node_len
 
     //const int r = 6371000;
     const int r = 1; //6371; // In KM
+    //const int r = 6371; // In KM
 
     // Start calculation
     float phi_1 = (lat_1 * M_PI / 180.0);
@@ -74,7 +75,9 @@ __global__ void calculate_distance(float *dest, float *a, float *b, int node_len
     ##
     ## Create edge matrix
     ##
+    print("Creating {0}x{1} matrix".format(rows.shape[0], cols.shape[0]))
     edges = np.zeros((rows.shape[0], cols.shape[0]))
+    print("Array is {0} mb".format((edges.nbytes / 1000) / 1000))
     edges = edges.astype(np.float32)
     edges_bytes = edges.size * edges.dtype.itemsize
     edges_gpu = drv.mem_alloc(edges_bytes)

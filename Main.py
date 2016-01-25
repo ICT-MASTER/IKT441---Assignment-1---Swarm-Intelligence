@@ -33,7 +33,7 @@ def load_country_codes():
             #country_codes[row[1]] = row[0]
     return country_codes
 
-def load_world_cities(loc=["*"]):
+def load_world_cities(loc=["*"], max=None):
     nodes = []
     nodes_latitude = []
     nodes_longitude = []
@@ -56,6 +56,9 @@ def load_world_cities(loc=["*"]):
                 nodes_longitude.append(lon)
                 i += 1
 
+                if max != None and max <= i:
+                    break
+
     return nodes, np.array(nodes_latitude, dtype=np.float32), np.array(nodes_longitude, dtype=np.float32)
 
 # Load country codes
@@ -65,7 +68,7 @@ print("[+{0}] Loaded country_code converter!".format(round(time.time() - start, 
 
 # Load Nodes
 start = time.time()
-nodes, nodes_latitude, nodes_longitude = load_world_cities([ "no", "se", "dk"])
+nodes, nodes_latitude, nodes_longitude = load_world_cities([ "no"], max=128)
 print("[+{0}] Parsed {1} nodes.".format(round(time.time() - start, 2), len(nodes)))
 
 # Create edges
@@ -73,28 +76,79 @@ start = time.time()
 edges = ACO.CUDA.create_distance_matrix(nodes_latitude, nodes_longitude)
 print("[+{0}] Generated {1} edges using GPU".format(round(time.time() - start, 2), len(edges) ** 2))
 
+MAX_PHEROMONES = 1000
+MIN_PHEROMONES = 0
+
 # Create edge_pheromones
 start = time.time()
-edges_pheromones = np.ones((nodes_latitude.shape[0], nodes_longitude.shape[0]), dtype=np.int32)
+edges_pheromones = np.ones((nodes_latitude.shape[0], nodes_longitude.shape[0]), dtype=np.float32)
+edges_pheromones.fill(MAX_PHEROMONES)
+np.fill_diagonal(edges_pheromones, 0)
 print("[+{0}] Created pheromones map".format(round(time.time() - start, 2)))
-
-
-
-#distance = ACO.CityFilter.calculate_distance_in_metres(nodes_latitude[12000], nodes_longitude[12000], nodes_latitude[1], nodes_longitude[1])
-#print(distance)
-#print(edges[12000][1])
-
 
 MAX_COST = np.sum(edges) # TODO , some nan values. BUT WHERE?
 
+
 start_node = nodes[0]
+target_node = nodes[1]
 
-target_node = nodes[5153]
 
-for i in range(1000000):
-    ant = ANT(start_node, nodes, edges, edges_pheromones, MAX_COST=MAX_COST, target_node=target_node)
+edges[start_node.idx][target_node.idx] = 100000 # 599939393
+
+
+result = {}
+
+lowest_cost_path = ""
+lowest_cost_val = 10000000000000000000000000000
+
+for i in range(10000):
+
+    ant = ANT(start_node, nodes, edges, edges_pheromones, MAX_COST=MAX_COST, MAX_PHEROMONES=MAX_PHEROMONES, MIN_PHEROMONES=MIN_PHEROMONES, MAX_STEPS=10, target_node=target_node)
     goal = ant.walk()
     ant.pheromones()
+    edges_pheromones = np.multiply(edges_pheromones, .99)
 
-    print("[{0}]: Edges: {2}, Route: {1}".format(i, sum([edges[item[0]][item[1]] for item in ant.visited_edges]), len(ant.visited_edges)))
+
+    cost_sum = sum([float(edges[item[0]][item[1]]) for item in ant.visited_edges])
+    path_length = len(ant.visited_edges)
+
+    #print("[{2}]: Cost: {0} | P_Length: {1}".format(cost_sum, path_length, i))
+    #print("{0} | {1} | {2}".format(ant.visited_edges, edges_pheromones[0][7], cost_sum))
+
+    identifier = str(ant.visited_edges[0][0])
+    for visited in ant.visited_edges:
+        identifier += " => " + str(visited[1])
+
+
+    if cost_sum < lowest_cost_val:
+        lowest_cost_val = cost_sum
+        lowest_cost_path = identifier
+
+
+    try:
+        result[identifier]["num"] += 1
+    except:
+        result[identifier] = {
+            'num': 1,
+            'cost': cost_sum,
+            'path_length': path_length
+
+        }
+
+
+
+
+
+
+for key in sorted(result, key=lambda x: (result[x]['num'], result[x]['cost'])):
+    val = result[key]
+    print(key)
+    print("\tNum: " + str(val["num"]))
+    print("\tCost: " + str(val["cost"]))
+    print("\tPath_Length: " + str(val["path_length"]))
+
+print("--------------------")
+print("Path: " + str(lowest_cost_path))
+print("Cost: " + str(lowest_cost_val))
+
 

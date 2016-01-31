@@ -68,7 +68,7 @@ print("[+{0}] Loaded country_code converter!".format(round(time.time() - start, 
 
 # Load Nodes
 start = time.time()
-nodes, nodes_latitude, nodes_longitude = load_world_cities([ "no"], max=128)
+nodes, nodes_latitude, nodes_longitude = load_world_cities([ "no"], max=512)
 print("[+{0}] Parsed {1} nodes.".format(round(time.time() - start, 2), len(nodes)))
 
 # Create edges
@@ -77,7 +77,7 @@ edges = ACO.CUDA.create_distance_matrix(nodes_latitude, nodes_longitude)
 print("[+{0}] Generated {1} edges using GPU".format(round(time.time() - start, 2), len(edges) ** 2))
 
 MAX_PHEROMONES = 1000
-MIN_PHEROMONES = 0
+MIN_PHEROMONES = 1
 
 # Create edge_pheromones
 start = time.time()
@@ -90,13 +90,15 @@ MAX_COST = np.sum(edges) # TODO , some nan values. BUT WHERE?
 
 
 start_node = nodes[0]
-target_node = nodes[1]
+target_node = nodes[50]
 
 
 edges[start_node.idx][target_node.idx] = 100000 # 599939393
 
 
 result = {}
+cost_result_x = []
+cost_result_y = []
 
 lowest_cost_path = ""
 lowest_cost_val = 10000000000000000000000000000
@@ -106,11 +108,19 @@ for i in range(10000):
     ant = ANT(start_node, nodes, edges, edges_pheromones, MAX_COST=MAX_COST, MAX_PHEROMONES=MAX_PHEROMONES, MIN_PHEROMONES=MIN_PHEROMONES, MAX_STEPS=10, target_node=target_node)
     goal = ant.walk()
     ant.pheromones()
+
+    # MMAS Decay
     edges_pheromones = np.multiply(edges_pheromones, .99)
+
+
 
 
     cost_sum = sum([float(edges[item[0]][item[1]]) for item in ant.visited_edges])
     path_length = len(ant.visited_edges)
+
+
+    cost_result_y.append(cost_sum)
+    cost_result_x.append(i)
 
     #print("[{2}]: Cost: {0} | P_Length: {1}".format(cost_sum, path_length, i))
     #print("{0} | {1} | {2}".format(ant.visited_edges, edges_pheromones[0][7], cost_sum))
@@ -137,7 +147,8 @@ for i in range(10000):
 
 
 
-
+import numpy as np
+import matplotlib.pyplot as plt
 
 
 for key in sorted(result, key=lambda x: (result[x]['num'], result[x]['cost'])):
@@ -150,5 +161,12 @@ for key in sorted(result, key=lambda x: (result[x]['num'], result[x]['cost'])):
 print("--------------------")
 print("Path: " + str(lowest_cost_path))
 print("Cost: " + str(lowest_cost_val))
+
+
+plt.plot(cost_result_x, cost_result_y, 'ro')
+plt.show()
+
+
+
 
 

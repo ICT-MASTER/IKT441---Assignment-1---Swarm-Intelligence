@@ -39,8 +39,21 @@ class ANT:
         self.visited_edges = []
 
     def current_viable_edges(self):
-        viable_edges = [(self.node.idx, y) for y in range(len(self.possible_edges[self.node.idx])) if y not in self.visited_nodes and y != self.target_node.idx]
-        return viable_edges
+        viable_edges_unordered = [(self.node.idx, y) for y in range(len(self.possible_edges[self.node.idx]))
+                                  if y not in self.visited_nodes
+                                  and y != self.target_node.idx]
+
+        viable_edges_ordered = []
+        
+        for edge in viable_edges_unordered:
+            distance = self.edges[edge[0]][edge[1]]
+
+
+
+
+
+
+        return viable_edges_unordered
 
 
     def edge_cost_sum(self):
@@ -96,19 +109,28 @@ class ANT:
         #  x ---- 200 ---- x ----- 400 ----- x ----- 100 ---- x ----- 2000 ---- x
 
         current_pheromones = 0
-        score = 1000**(1-float(self.edge_cost_sum())/self.MAX_COST) # Score function
+        current_cost = 0
+        #score = 1000**(1-float(self.edge_cost_sum())/self.MAX_COST) # Score function
 
 
         for idx, v_edge in enumerate(self.visited_edges):
 
-            current_pheromones = current_pheromones + self.edges_pheromones[v_edge[0]][v_edge[1]]
-            #score = ((1 - .90) * self.edges_pheromones[v_edge[0]][v_edge[1]]) + (1 / self.edge_cost_sum())
+            #current_pheromones = current_pheromones + self.edges_pheromones[v_edge[0]][v_edge[1]]
+            #current_cost = current_cost + self.edges[v_edge[0]][v_edge[1]]
+
+            score = ((1 - 1) * self.edges_pheromones[v_edge[0]][v_edge[1]]) + (1 / self.edge_cost_sum())
+            new_score = self.edges_pheromones[v_edge[0]][v_edge[1]] + score
+            #score = 1000**(1-float(current_cost)/self.MAX_COST) # Score function
             #print(score)|
 
-            score = 1 * math.pow(self.edges_pheromones[v_edge[0]][v_edge[1]],  2) + 0.5
+            #score = 1 * math.pow(self.edges_pheromones[v_edge[0]][v_edge[1]],  2) + 0.5
             #score = 1*math.pow(((1 - .90) * self.edges_pheromones[v_edge[0]][v_edge[1]]) + (1 / self.edge_cost_sum()),2)+0.5
 
-            self.edges_pheromones[v_edge[0]][v_edge[1]] = self.edges_pheromones[v_edge[0]][v_edge[1]] + score
-            #print(self.edges_pheromones[v_edge[0]][v_edge[1]])
+            if new_score <= self.MIN_PHEROMONES:
+                self.edges_pheromones[v_edge[0]][v_edge[1]] = self.MIN_PHEROMONES
+            elif new_score >= self.MAX_PHEROMONES:
+                self.edges_pheromones[v_edge[0]][v_edge[1]] = self.MAX_PHEROMONES
+            else:
+                self.edges_pheromones[v_edge[0]][v_edge[1]] = new_score
 
 

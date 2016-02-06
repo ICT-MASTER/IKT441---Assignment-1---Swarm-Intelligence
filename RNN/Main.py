@@ -37,7 +37,7 @@ for (dir, _, files) in os.walk("./Articles"):
 
 out_file = open("inpux.txt", "w")
 i = 0
-num = 10
+num = 100
 for (dir, _, files) in os.walk("./Articles"):
     for f in files:
         path = os.path.join(dir, f)
